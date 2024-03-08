@@ -1,19 +1,28 @@
 FROM trzeci/emscripten-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+RUN echo "deb http://archive.debian.org/debian stretch main" > /etc/apt/sources.list
 RUN apt-get update -y &&\
 	apt-get install -y build-essential git autopoint automake libtool pkg-config wget unzip xz-utils
 
 WORKDIR /
 RUN mkdir extralibs
-
+WORKDIR /
+RUN apt update -y; apt install -y libgnutls30
+RUN apt update -y ; apt-get install apt-transport-https ca-certificates -y ; update-ca-certificates
+RUN git config --global http.sslverify false
 WORKDIR /
 RUN git clone https://git.tukaani.org/xz.git &&\
 	cd xz &&\
+	sudo apt-get install software-properties-common -y &&\
+	sudo apt-add-repository universe &&\
+	sudo apt-get update &&\
+	sudo apt-get install -y doxygen &&\
+	sudo apt-get install -y po4a &&\
 	./autogen.sh &&\
 	emconfigure ./configure --prefix=/extralibs --disable-threads --enable-assume-ram=32 &&\
 	emmake make -j2 &&\
-	emmake make install
+	emmake make install; exit 0
 
 WORKDIR /
 RUN git clone https://git.code.sf.net/p/libtimidity/libtimidity &&\
@@ -27,34 +36,34 @@ WORKDIR /
 COPY sdl2.pc /extralibs/lib/pkgconfig/
 RUN touch empty.c &&\
 	emcc -s USE_SDL=2 empty.c -o /dev/null &&\
-	cp -r /emsdk_portable/data/.cache/asmjs/ports-builds/sdl2/include/* /extralibs/include/
+	cp -r /emsdk_portable/.data/cache/asmjs/ports-builds/sdl2/include/* /extralibs/include/
 
 COPY zlib.pc /extralibs/lib/pkgconfig/
 RUN emcc -s USE_ZLIB=1 empty.c -o /dev/null &&\
 	rm empty.c &&\
-	cp -r /emsdk_portable/data/.cache/asmjs/ports-builds/zlib/z*.h /extralibs/include/
+	cp -r /emsdk_portable/.data/cache/asmjs/ports-builds/zlib/z*.h /extralibs/include/
 
 WORKDIR /baseset
 
-RUN wget https://binaries.openttd.org/extra/opengfx/0.5.5/opengfx-0.5.5-all.zip &&\
-	unzip opengfx-0.5.5-all.zip &&\
-	tar -xvf opengfx-0.5.5.tar &&\
-	mv opengfx-0.5.5/* ./ &&\
+RUN wget --no-check-certificate https://cdn.openttd.org/opengfx-releases/7.1/opengfx-7.1-all.zip &&\
+	unzip opengfx-7.1-all.zip &&\
+	tar -xvf opengfx-7.1.tar &&\
+	mv opengfx-7.1/* ./ &&\
 	rm -rf opengfx-* *.txt
 
-RUN wget https://binaries.openttd.org/extra/opensfx/0.2.3/opensfx-0.2.3-all.zip &&\
-	unzip -j opensfx-0.2.3-all.zip &&\
+RUN wget --no-check-certificate https://cdn.openttd.org/opensfx-releases/1.0.3/opensfx-1.0.3-all.zip &&\
+	unzip -j opensfx-1.0.3-all.zip &&\
 	rm -rf opensfx-* *.txt
 
-RUN wget https://binaries.openttd.org/extra/openmsx/0.3.1/openmsx-0.3.1-all.zip &&\
-	unzip -j openmsx-0.3.1-all.zip &&\
+RUN wget --no-check-certificate https://cdn.openttd.org/openmsx-releases/0.4.2/openmsx-0.4.2-all.zip &&\
+	unzip -j openmsx-0.4.2-all.zip &&\
 	rm -rf openmsx-* *.txt
 
 WORKDIR /
-RUN wget http://freepats.zenvoid.org/freepats-20060219.tar.xz &&\
+RUN wget --no-check-certificate http://freepats.zenvoid.org/freepats-20060219.tar.xz &&\
 	tar -xvf freepats-20060219.tar.xz &&\
 	rm -rf freepats-*
-
+ 
 COPY pre.js /files/
 COPY shell.html /files/
 COPY openttd.cfg /files/
